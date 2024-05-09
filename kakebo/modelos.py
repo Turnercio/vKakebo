@@ -64,3 +64,5 @@ class Dao:
         with open(self.ruta, "w", newline="") as f:
             f.write("concepto,fecha,cantidad,categoria\n")
 
+
+

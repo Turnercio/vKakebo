@@ -5,7 +5,7 @@
 
 2. Guardar un ingreso y un gasto
     2.1 El fichero contiene las filas adecuadas, 1 de cabecera y una de ingreso y otra de gasto
-
+            (crear metodo grabar)
 
 3. leer datos del fichero con un DAO:
     3.1 Preparar un fichero con datos
