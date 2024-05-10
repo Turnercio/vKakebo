@@ -1,5 +1,7 @@
 from datetime import date
 from enum import Enum
+import csv
+import os
 
 class Movimiento:
     def __init__(self, concepto, fecha, cantidad):
@@ -35,6 +37,12 @@ class Ingreso(Movimiento):
     def __repr__(self):
         return f"Ingreso: {self.fecha} {self.concepto} {self.cantidad:.2f}"
         
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+         
+        return self.concepto == other.concepto and self.cantidad == other.cantidad and self.fecha == other.fecha
+
 class Gasto(Movimiento):
     def __init__(self, concepto, fecha, cantidad, categoria):
         super().__init__(concepto, fecha, cantidad)
@@ -49,7 +57,11 @@ class Gasto(Movimiento):
     def __repr__(self):
         return f"Gasto ({self.categoria.name:30s}): {self.fecha} {self.concepto} {self.cantidad:.2f}"
 
-
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+         
+        return self.concepto == other.concepto and self.cantidad == other.cantidad and self.fecha == other.fecha and self.categoria == other.categoria
 
 class categoria_gastos(Enum):
 
@@ -61,8 +73,37 @@ class categoria_gastos(Enum):
 class Dao:
     def __init__(self, ruta):
         self.ruta = ruta
-        with open(self.ruta, "w", newline="") as f:
-            f.write("concepto,fecha,cantidad,categoria\n")
+        if not os.path.exists(self.ruta):
+            with open(self.ruta, "w", newline="") as f:
+                f.write("concepto,fecha,cantidad,categoria\n")
 
+        self.puntero_lectura = 0
 
+    def grabar(self, movimiento):
+        with open(self.ruta, "a", newline="") as f:
+            writer = csv.writer(f, delimiter=",", quotechar='"')       
 
+            if isinstance(movimiento, Ingreso):
+                #f.write(f"{movimiento.concepto},{movimiento.fecha},{movimiento.cantidad},\n")
+                writer.writerow([movimiento.concepto, movimiento.fecha, movimiento.cantidad, ""])
+            elif isinstance(movimiento, Gasto):
+               # f.write(f"{movimiento.concepto},{movimiento.fecha},{movimiento.cantidad},{movimiento.categoria.value}\n")
+                writer.writerow([movimiento.concepto, movimiento.fecha, movimiento.cantidad, movimiento.categoria.value])
+            
+
+    def leer(self):
+        with open(self.ruta, "r") as f:
+            reader = csv.DictReader(f)
+            contador = 0
+            for registro in reader:
+                if registro["categoria"] == "":
+                    #instanciar ingreso con los datos de registro
+                    variable = Ingreso(registro["concepto"], date.fromisoformat(registro["fecha"]), float(registro["cantidad"]))
+                elif registro["categoria"] in [str(cat.value) for cat in categoria_gastos]:
+                    #instanciar gasto con los datos de registro
+                    variable = Gasto(registro["concepto"], date.fromisoformat(registro["fecha"]), float(registro["cantidad"]), categoria_gastos(int(registro["categoria"])))
+                if contador == self.puntero_lectura:
+                    self.puntero_lectura += 1
+                    return variable
+                contador +=1
+            return None
