@@ -70,7 +70,7 @@ class categoria_gastos(Enum):
     OCIO_VICIO = 3
     EXTRAS = 4
 
-class Dao:
+class Dao_CSV:
     def __init__(self, ruta):
         self.ruta = ruta
         if not os.path.exists(self.ruta):
@@ -107,3 +107,7 @@ class Dao:
                     return variable
                 contador +=1
             return None
+        
+class Dao_sqlite:
+    def __init__(self, ruta):
+        self.ruta = ruta

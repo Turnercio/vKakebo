@@ -1,2 +1,4 @@
 myvenv/
 **__pycache__/
+datos/**.csv
+datos/**.db
