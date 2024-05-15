@@ -25,6 +25,15 @@ def borrar_fichero(path):
     if os.path.exists(path):
         os.remove(path)
 
+def borrar_movimientos_sqlite():
+    con = sqlite3.connect(RUTA_SQLITE)
+    cur = con.cursor()
+
+    query = "DELETE FROM movimientos;"
+    cur.execute(query)
+    con.commit()
+    con.close()  
+
 def test_crear_dao_csv():
     ruta = "datos/test_ movimientos.csv"
     borrar_fichero(ruta)
@@ -82,10 +91,73 @@ def test_crear_dao_sqlite():
 def test_leer_dao_sqlite():
     #preparar la tabla movimientos como toca, borrar e insertar un ingreso y un gasto
 
+    borrar_movimientos_sqlite()
     con = sqlite3.connect(RUTA_SQLITE)
-    cur = con.cursor
+    cur = con.cursor()
+    query = "INSERT INTO movimientos (ID, tipo_movimiento, concepto, fecha, cantidad, categoria) VALUES (?, ?, ?, ?, ?, ?)"
 
-    query = "DELETE FROM movimientos;"
+    cur.executemany(query, ((1, "I", "Un ingreso cualquiera", date(2024, 5, 14), 100, None), (2, "G", "Gasto sorpresa", date(2024, 5, 1), 123, 3)))
+    
+    con.commit()
+    con.close()
+    
+    dao = Dao_sqlite(RUTA_SQLITE)
+    movimiento = dao.leer(1)
+    assert movimiento == Ingreso("Un ingreso cualquiera", date(2024, 5, 14), 100)
+    
+    movimiento = dao.leer(2)
+    assert movimiento == Gasto("Gasto sorpresa", date(2024, 5, 1), 123, categoria_gastos.OCIO_VICIO)
+
+def test_grabar_sqlite():
+    
+    borrar_movimientos_sqlite()
+    
+    ing = Ingreso ("Un concepto cualquiera", date(1990, 1, 1), 123)
+    dao = Dao_sqlite(RUTA_SQLITE)
+    dao.grabar(ing)
+    
+    con = sqlite3.connect(RUTA_SQLITE)
+    cur = con.cursor()
+   
+    query = "SELECT ID, tipo_movimiento, concepto, fecha, cantidad, categoria FROM movimientos order by ID desc;"
+    res = cur.execute(query)   
+    fila = res.fetchone()
+    con.close()
+    
+    
+    assert fila[1] == "I"
+    assert fila[2] == "Un concepto cualquiera"
+    assert fila[3] == "1990-01-01"
+    assert fila[4] == 123.0
+    assert fila[5] == None
+
+
+
+def test_update_sqlite():
+
+    borrar_movimientos_sqlite()
+    con = sqlite3.connect(RUTA_SQLITE)
+    cur = con.cursor()
+
+    query = "INSERT INTO movimientos (ID, tipo_movimiento, concepto, fecha, cantidad) VALUES (1, 'I', 'concepto original', '0001-01-01', 0.1)"
     cur.execute(query)
-    con.commit
+    con.commit()
+    con.close()
 
+    dao = Dao_sqlite(RUTA_SQLITE)
+
+    movimiento = dao.leer(1)
+    movimiento.concepto = "Concepto cambiado"
+    movimiento.fecha = "2024-01-04"
+    movimiento.cantidad = 32
+
+    dao.grabar(movimiento)
+
+    #comprobar la modificacion
+
+    modificado = dao.leer(1)
+
+    assert isinstance(modificado, Ingreso) 
+    assert modificado.concepto == "Concepto cambiado"
+    assert modificado.fecha == date(2024, 1, 4)
+    assert modificado.cantidad == 32.0
