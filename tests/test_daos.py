@@ -161,3 +161,34 @@ def test_update_sqlite():
     assert modificado.concepto == "Concepto cambiado"
     assert modificado.fecha == date(2024, 1, 4)
     assert modificado.cantidad == 32.0
+
+def test_leer_todo_dao_sqlite():
+    borrar_movimientos_sqlite()
+    con = sqlite3.connect(RUTA_SQLITE)
+    cur = con.cursor()
+
+    query = "INSERT INTO movimientos (id, tipo_movimiento, concepto, fecha, cantidad, categoria) VALUES (?, ?, ?, ?, ?, ?)"
+
+    cur.executemany(query, [(1, "I", "Un ingreso cualquiera", date(2024, 5, 14), 100, None),
+                            (2, "G", "Un gasto cualquiera", date(2024, 5, 1), 123, 3),
+                            (6, "I", "nomina", date(2024, 5, 1), 1500, None),
+                            (4, "G", "Comida familiar", date(2024, 4, 6), 35, 3),
+                            (8, "G", "zapatillas", date(2024, 5, 6), 57.5, 1)])
+    
+    con.commit()
+    con.close()
+
+    dao = Dao_sqlite(RUTA_SQLITE)
+    movimientos = dao.leer_todo()
+
+    movimiento1 = dao.leer_todo()
+    assert Ingreso("Un ingreso cualquiera", date(2024, 5, 14), 100) in movimientos
+    movimiento2 = dao.leer_todo()
+    assert Gasto("Un gasto cualquiera", date(2024, 5, 1), 123, categoria_gastos.OCIO_VICIO) in movimientos
+    movimiento3 = dao.leer_todo()
+    assert Ingreso("nomina", date(2024, 5, 1), 1500) in movimientos
+    movimiento4 = dao.leer_todo()
+    assert Gasto("Comida familiar", date(2024, 4, 6), 35, categoria_gastos.OCIO_VICIO) in movimientos
+    movimiento5 = dao.leer_todo()
+    assert Gasto("zapatillas", date(2024, 5, 6), 57.5, categoria_gastos.NECESIDAD) in movimientos
+

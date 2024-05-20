@@ -160,4 +160,24 @@ class Dao_sqlite:
 
         con.commit()
         con.close()
+
+    def leer_todo(self):
+        con = sqlite3.connect(self.ruta)
+        cur = con.cursor()
+
+        query = "SELECT id, tipo_movimiento, concepto, fecha, cantidad, categoria FROM movimientos"
+
+        res = cur.execute(query)
+        valores = res.fetchall()
+        con.close()
+
+        lista_completa = []
+        for valor in valores:
+            if valor[1] == "I":
+                lista_completa.append(Ingreso(valor[2], date.fromisoformat(valor[3]), valor[4], valor[0]))
+
+            elif valor[1] == "G":
+                lista_completa.append(Gasto(valor[2], date.fromisoformat(valor[3]), valor[4], categoria_gastos(valor[5]), valor[0]))
+
+        return lista_completa
             
