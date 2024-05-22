@@ -1,13 +1,13 @@
 import tkinter as tk
 from tkinter import ttk
-from kakebo.vistas import Input, DateInput
+from kakebo.vistas import Input, DateInput, FormMovimiento
 
 
 
 root = tk.Tk()
 #root.pack_propagate()
 
-marco = tk.Frame(root, width= 200, height=80, background="red")
+"""marco = tk.Frame(root, width= 200, height=80, background="red")
 marco.pack()
 #marco.pack_propagate()
 lblFecha = tk.Label(marco, text="Fecha:", anchor=tk.NW)
@@ -23,6 +23,9 @@ i2 = Input(root, "Segundo Input", 250, 60)
 i2.pack(side=tk.TOP)
 
 di = DateInput(root, 250, 35)
-di.pack(side=tk.TOP)
+di.pack(side=tk.TOP)"""
+
+form=FormMovimiento(root)
+form.pack(side=tk.TOP)
 
 root.mainloop()
