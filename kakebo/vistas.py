@@ -2,7 +2,8 @@ import tkinter as tk
 from tkinter import ttk
 from datetime import date
 from kakebo import WIDTH, PAD_DEFAULT
-from kakebo.modelos import CategoriaGastos
+from kakebo.modelos import CategoriaGastos, Ingreso, Gasto
+
 
 class Input(tk.Frame):
     def __init__(self, parent, labelText, W, H):
@@ -11,6 +12,7 @@ class Input(tk.Frame):
         lbl = tk.Label(self, text=labelText, anchor=tk.W, width=10)
         lbl.pack(side=tk.LEFT)
 
+
         self.caja_input = tk.Entry(self)
         self.caja_input.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -18,10 +20,14 @@ class Input(tk.Frame):
         print("ksks")
         self.caja_input.bind(event_type, callback)
 
+    @property
+    def value(self):
+        return self.caja_input.get()
         
 class NumberInput(Input):
     def __init__(self, parent, labelText, W, H):
         super().__init__(parent, labelText, W, H)
+        
 
         validate_input = self.register(self.__validate_input)
         self.caja_input.config(validate="key", validatecommand=(validate_input, "%P"))
@@ -39,7 +45,7 @@ class NumberInput(Input):
     @property
     def value(self):
         if self.caja_input.get() in ("", "-"):       
-            None
+            return 0.0
         else:
             return float(self.caja_input.get())
         
@@ -55,17 +61,40 @@ class selectInput(tk.Frame):
          
         tk.Label(self, text=labelText, anchor=tk.W, width=10).pack(side=tk.LEFT)
 
-        self.selected = tk.StringVar()
-        valores_opciones = []
-        for cadena in options:
-            valores_opciones.append(cadena.name)
+        self.__selected = tk.StringVar()
 
-        self.caja_input = ttk.Combobox(self, values=valores_opciones,
-                                       textvariable=self.selected,
-                                       state="readonly")
+        self.enum_options = options
+        self.valores_opciones = {}
+        for option in options:
+            self.valores_opciones[option.name] = option.value
+
+
+        self.caja_input = ttk.Combobox(self, values=list(self.valores_opciones.keys()),
+                                       textvariable=self.__selected,
+                                       state="disabled")
         self.caja_input.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+    @property
+    def selected(self):
+        valor_seleccionado = self.__selected.get()
+        value_del_enum_asociado = self.valores_opciones.get(valor_seleccionado)
+        if value_del_enum_asociado != None:
+            return self.enum_options(value_del_enum_asociado)
+        else:
+            return None
+    
+    @selected.setter
+    def selected(self, value):
+        self.__selected.set(value)
 
+    def enable(self, value):
+        if value == True:
+            self.caja_input.config(state="readonly")
+        elif value == False:
+            self.selected = ""
+            self.caja_input.config(state="disabled")
+
+    
 class DateInput(tk.Frame):
     def __init__(self, parent, W, H, text="Fecha:"):
         super().__init__(parent, width=W, height=H)
@@ -118,6 +147,7 @@ class DateInput(tk.Frame):
             return False 
 
         if candidato == "":
+            self.monthEntry.delete(0, "end")
             self.monthEntry.config(state=tk.DISABLED)
             return True
         
@@ -139,6 +169,7 @@ class DateInput(tk.Frame):
             return False 
         
         if candidato == "":
+            self.yearEntry.delete(0, "end")
             self.yearEntry.config(state=tk.DISABLED)
             return True
         
@@ -170,11 +201,19 @@ class DateInput(tk.Frame):
         
         return True
 
+    @property
+    def value(self):
+        if len(self.yearEntry.get()) == 4:
+            return date(int(self.yearEntry.get()), int(self.monthEntry.get()), int(self.dayEntry.get())) 
+        else:
+            return None
 
 class FormMovimiento(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, acceptCommand):
         super().__init__(parent, width=WIDTH, height=250, padx=PAD_DEFAULT, pady=PAD_DEFAULT)
         self.pack_propagate(False)
+        self.value = None
+        self.accept_command = acceptCommand
         
         self.fecha = DateInput(self, 550, 40 )
         self.fecha.pack(side=tk.TOP)
@@ -195,8 +234,50 @@ class FormMovimiento(tk.Frame):
         btnCancelar = tk.Button(fr, text="Cancelar")
         btnCancelar.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
 
-        btnAceptar = tk.Button(fr, text="Aceptar")
+        btnAceptar = tk.Button(fr, text="Aceptar", command= self.enviarMovimiento)
         btnAceptar.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
 
     def __control_categoria(self, evento):
-        print(self.cantidad.value)
+        if self.cantidad.value < 0:
+            self.categoria.enable(True)
+        else:
+            
+            self.categoria.enable(False)
+
+    def enviarMovimiento(self):
+        print(self.categoria.selected)
+       
+        msgs = []
+        if self.fecha.value is None:
+            msgs.append("Debe introducir una fecha correcta")
+
+        elif self.fecha.value > date.today():
+            msgs.append("La fecha introducida no puede ser posterior a la fecha actual")
+
+        if len(self.concepto.value) < 5:
+            msgs.append("El concepto debe tener al menos 5 caracteres")
+        
+        if self.cantidad.value == 0:
+            msgs.append("Debe introducir una cantidad correcta")
+
+        if self.cantidad.value < 0 and self.categoria.selected is None:
+            msgs.append("Debe seleccionar una categoria")
+
+        if msgs != []:
+            pass
+            #mostrar_error(msgs)
+        else:
+            if self.categoria.selected != None:
+                self.value = Gasto(self.concepto.value,
+                                   self.fecha.value, 
+                                    -self.cantidad.value, 
+                                    self.categoria.selected)
+            else:
+                self.value = Ingreso( 
+                                    self.concepto.value,
+                                    self.fecha.value,  
+                                    self.cantidad.value,
+                                    
+                                    )
+                
+            self.accept_command(self.value)
